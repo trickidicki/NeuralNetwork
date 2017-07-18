@@ -24,7 +24,7 @@ public class Motor : MonoBehaviour {
 	}
 	
 	// Update is called once per frame
-	void Update () {
+	void FixedUpdate () {
 		heading = transform.rotation.eulerAngles.y - 90;
 
 		leftsteer = agent.leftForce;

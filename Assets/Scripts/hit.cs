@@ -27,12 +27,16 @@ public class hit : MonoBehaviour {
 		if (other.gameObject.tag == "Checkpoint") {
 			Renderer tmp = other.gameObject.GetComponent<Renderer> ();
 			Checkpoint t = other.gameObject.GetComponent<Checkpoint>();
-			bool p = t.passed;
+            if (!t)
+            {
+                return;
+            }
+            bool p = t.passed;
 			if(!p){
 				t.SetBool(true);
 				tmp.material = Passed;
 				checkpoints++;
-				agent.dist += 1.0f;
+                //agent.HitCheckpoint();
 			}
 		} else {
 			//hit a wall considered fail

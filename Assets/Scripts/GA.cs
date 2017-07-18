@@ -8,7 +8,7 @@ public class GA {
 	public int totalPopulation;
 	private int genomeID;
 	public int generation;
-	private int totalGenomeWeights;
+	//private int totalGenomeWeights;
 
 	public float MUTATION_RATE;
 	public float MAX_PERBETUATION;

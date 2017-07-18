@@ -1,91 +1,63 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
-public class RayCast : MonoBehaviour {
-	public float RayCast_Length;
+public class RayCast : MonoBehaviour
+{
+    public float RayCast_Length = 5.0f;
 
-	public RaycastHit hit_l, hit_fl, hit_f, hit_fr, hit_r;
-	public float dis_l, dis_fl, dis_f, dis_fr, dis_r;
+    public int rayCount = 7;
+    public RaycastHit[] rays;
+    public float[] hits;
+    private float segmentAngle;
 
-	private Vector3 origin, left, frontleft, front, frontright, right;
-	private float heading;
+    private BoxCollider box;
 
-	// Use this for initialization
-	void Start () {
-		//set detect radius
-		RayCast_Length = 5.0f;
+    // Use this for initialization
+    void Start()
+    {
+        box = GetComponent<BoxCollider>();
 
+        rays = new RaycastHit[rayCount];
+        hits = new float[rayCount];
 
-		origin = transform.position + Vector3.up * 0.2f;
-		/*
-		left = origin - (Vector3.forward * RayCast_Length);
-		frontleft = origin + (Vector3.left - Vector3.forward) * RayCast_Length;
-		front = origin + (Vector3.left * RayCast_Length);
-		frontright = origin + (Vector3.left + Vector3.forward) * RayCast_Length;
-		right = origin + (Vector3.forward * RayCast_Length);
-		*/
-		heading = transform.rotation.eulerAngles.y;
-		float angle = heading / 180 * Mathf.PI;
+        if (rayCount <= 1)
+            rayCount = 5;
 
-		left = new Vector3 (origin.x - RayCast_Length * Mathf.Cos (angle), origin.y, origin.z + RayCast_Length * Mathf.Sin (angle));
-		frontleft = new Vector3 (origin.x - RayCast_Length * Mathf.Sin (angle - Mathf.PI / 4), origin.y, origin.z - RayCast_Length * Mathf.Cos (angle - Mathf.PI / 4));
-		front = new Vector3 (origin.x - RayCast_Length * Mathf.Sin (angle), origin.y, origin.z - RayCast_Length * Mathf.Cos (angle));
-		frontright = new Vector3 (origin.x - RayCast_Length * Mathf.Sin (angle + Mathf.PI / 4), origin.y, origin.z - RayCast_Length * Mathf.Cos (angle + Mathf.PI / 4));
-		right = origin + origin - left;
+        segmentAngle = 180.0f / (rayCount - 1);
+    }
 
-		dis_l = 0.0f;
-		dis_fl = 0.0f;
-		dis_f = 0.0f;
-		dis_fr = 0.0f;
-		dis_r = 0.0f;
+    // Update is called once per frame
+    void FixedUpdate()
+    {
+        RaycastHit hitInfo;
+        var origin = transform.TransformPoint(box.center);
+        bool ok = Physics.Raycast(origin, -transform.forward, out hitInfo);
+        Debug.DrawRay(transform.position, -transform.forward, Color.green, 0, true);
 
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		origin = transform.position + Vector3.up * 0.2f;
-		/*
-		left = origin - (Vector3.forward * RayCast_Length);
-		frontleft = origin + (Vector3.left - Vector3.forward) * RayCast_Length;
-		front = origin + (Vector3.left * RayCast_Length);
-		frontright = origin + (Vector3.left + Vector3.forward) * RayCast_Length;
-		right = origin + (Vector3.forward * RayCast_Length);
-		*/
-		heading = transform.rotation.eulerAngles.y;
-		float angle = heading / 180 * Mathf.PI;
+        for (var n = 0; n < rayCount; n++)
+        {
+            float angle = -90.0f + n * segmentAngle;
+            Vector3 vec = Quaternion.AngleAxis(angle, transform.up) * -transform.forward;
+            hits[n] = CastRay(origin, vec);
+        }
+    }
 
-		left = new Vector3 (origin.x - RayCast_Length * Mathf.Cos (angle), origin.y, origin.z + RayCast_Length * Mathf.Sin (angle));
-		frontleft = new Vector3 (origin.x - RayCast_Length * Mathf.Sin (angle - Mathf.PI / 4), origin.y, origin.z - RayCast_Length * Mathf.Cos (angle - Mathf.PI / 4));
-		front = new Vector3 (origin.x - RayCast_Length * Mathf.Sin (angle), origin.y, origin.z - RayCast_Length * Mathf.Cos (angle));
-		frontright = new Vector3 (origin.x - RayCast_Length * Mathf.Sin (angle + Mathf.PI / 4), origin.y, origin.z - RayCast_Length * Mathf.Cos (angle + Mathf.PI / 4));
-		right = origin + origin - left;
+    public List<float> GetProbes()
+    {
+        return new List<float>(hits);
+    }
 
-
-		CastRay ();
-
-		dis_l = hit_l.distance;
-		dis_fl = hit_fl.distance;
-		dis_f = hit_f.distance;
-		dis_fr = hit_fr.distance;
-		dis_r = hit_r.distance;
-
-	}
-
-	void CastRay() {
-		//left linecast
-		Physics.Linecast (origin, left, out hit_l);
-		Debug.DrawLine (origin, left, Color.yellow);
-		//frontleft
-		Physics.Linecast (origin, frontleft, out hit_fl);
-		Debug.DrawLine (origin, frontleft, Color.red);
-		//front
-		Physics.Linecast (origin, front, out hit_f);
-		Debug.DrawLine (origin, front, Color.white);
-		//frontright
-		Physics.Linecast (origin, frontright, out hit_fr);
-		Debug.DrawLine (origin, frontright, Color.green);
-		//right
-		Physics.Linecast (origin, right, out hit_r);
-		Debug.DrawLine (origin, right, Color.blue);
-	}
+    float CastRay(Vector3 origin, Vector3 vec)
+    {
+        RaycastHit hitInfo;
+        bool col = Physics.Raycast(origin, vec, out hitInfo);
+        Debug.DrawRay(origin, vec, Color.yellow, 0, true);
+        return Normalise(hitInfo.distance);
+    }
+    public float Normalise(float i)
+    {
+        float depth = (i > 10.0f ? 10.0f : i) / RayCast_Length;     //Clamp maximum depth
+        return 1 - depth;
+    }
 }

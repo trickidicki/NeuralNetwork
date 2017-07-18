@@ -11,7 +11,7 @@ public class Agent : MonoBehaviour {
 
 	public NNet neuralnet;
 	public RayCast raycast;
-	public float l,fl,f,fr,r;
+	//public float l,fl,f,fr,r;
 
 	public float MAX_ROTATION; //max rotate speed
 	public float _SPEED;
@@ -25,51 +25,43 @@ public class Agent : MonoBehaviour {
 
 	hit hit;
 
+    int framecount;
+    float fitness;
+    float distanceTravelled = 0;
+    Vector3 lastPoint;
+    float totalRot;
+    float cummulativeAngle;
+    bool selfDrive = false;
+
 	// Use this for initialization
 	void Start () {
-		hasFailed = false;
+        hit = gameObject.GetComponent<hit>();
+        ClearFailure();
 
+        raycast = gameObject.GetComponent<RayCast>();
 		neuralnet = new NNet ();
-		neuralnet.CreateNet (1, 5, 8, 2);
-		raycast = gameObject.GetComponent<RayCast> ();
-
-		l = raycast.dis_l;
-		fl = raycast.dis_fl;
-		f = raycast.dis_f;
-		fr = raycast.dis_fr;
-		r = raycast.dis_fr;
+        neuralnet.CreateNet(2, raycast.rayCount, 12, 2);
 
 		leftForce = 0.0f;
 		rightForce = 0.0f;
 		leftTheta = 0.0f;
 		rightTheta = 0.0f;
 
-		hit = gameObject.GetComponent<hit> ();
-		
 	}
 
 	// Update is called once per frame
-	void Update () {
-		hasFailed = hit.crash;
+	void FixedUpdate () {
+        if (!selfDrive)
+        {
+            UpdateFitness();
+            if (CheckFailure())
+                return;
+        }
 
-		//update raycast hit distance
-		l = raycast.dis_l;
-		fl = raycast.dis_fl;
-		f = raycast.dis_f;
-		fr = raycast.dis_fr;
-		r = raycast.dis_fr;
-		
-		
-		if (!hasFailed) {
-			dist += Time.deltaTime;
-			List<float> inputs = new List<float> ();
-			inputs.Add (Normalise (l));
-			inputs.Add (Normalise (fl));
-			inputs.Add (Normalise (f));
-			inputs.Add (Normalise (fr));
-			inputs.Add (Normalise (r));
-			
-			neuralnet.SetInput (inputs);
+
+		if (selfDrive || !hasFailed) {
+            dist += Time.fixedDeltaTime;
+			neuralnet.SetInput (raycast.GetProbes());
 			neuralnet.refresh ();
 			
 			leftForce = neuralnet.GetOutput (0);
@@ -77,8 +69,8 @@ public class Agent : MonoBehaviour {
 			
 			leftTheta = MAX_ROTATION * leftForce;
 			rightTheta = MAX_ROTATION * rightForce;
-			
-			headingAngle += (leftTheta - rightTheta) * Time.deltaTime;
+
+            headingAngle += (leftTheta - rightTheta) * Time.fixedDeltaTime;
 			
 			float speed = (Mathf.Abs (leftForce + rightForce)) / 2;
 			speed *= _SPEED;
@@ -90,21 +82,79 @@ public class Agent : MonoBehaviour {
 		}
 	}
 
-	public float Normalise(float i){
-		float depth = i / raycast.RayCast_Length;
-		return 1 - depth;
-	}
+    private int ElapsedTime()
+    {
+        return Time.frameCount - framecount;
+    }
 
-	public void Attach(NNet net){
+    private void UpdateRotation()
+    {
+        Vector3 facing = transform.TransformDirection(Vector3.forward);
+        facing.y = 0;
+       
+        float angle = Vector3.Angle(lastPoint, facing);
+        cummulativeAngle += Mathf.Abs(angle);
+        if (Vector3.Cross(lastPoint, facing).y < 0)
+            angle *= -1;
+
+        totalRot += angle;
+        lastPoint = facing;
+    }
+
+    private void UpdateFitness()
+    {
+        UpdateRotation();
+
+        distanceTravelled += Vector3.Distance(transform.position, lastPoint);
+
+        int elapsedTime = ElapsedTime();
+        if (elapsedTime > 0)
+        {
+            fitness = elapsedTime + distanceTravelled / elapsedTime;
+            var angular = 0.2f * Mathf.Abs(totalRot / cummulativeAngle);
+            fitness *= angular; // Peanalise extra angular change
+        }
+
+        fitness += hit.checkpoints * 10;
+    }
+
+    public float GetFitness()
+    {
+        return fitness;
+    }
+
+    private bool CheckFailure()
+    {
+        hasFailed = hit.crash || Mathf.Abs(totalRot) > 1080.0f;
+        if( hasFailed )
+        {
+            dist = 0.0f;
+        }
+        return hasFailed;
+    }
+
+	public void Attach(NNet net, bool justDrive = false){
 		neuralnet = net;
+        if(justDrive)
+        {
+            selfDrive = true;
+        }
 	}
 
 	public void ClearFailure(){
 		hasFailed = false;
-		hit.crash = false;
-		hit.checkpoints = 0;
+        hit.crash = false;
+        hit.checkpoints = 0;
 		dist = 0.0f;
 		collidedCorner = -1;
+        distanceTravelled = 0.0f;
+        framecount = Time.frameCount;
+
+        totalRot = 0.0f;
+        cummulativeAngle = 0.0f;
+        lastPoint = transform.TransformDirection(Vector3.forward);
+        lastPoint.y = 0;
+        headingAngle = 0.0f;
 	}
 
 	public float Clamp (float val, float min, float max){
@@ -430,6 +480,14 @@ public class Genome{
 	public int ID;
 	public List<float> weights;
 	
+    public Genome() { }
+
+    public Genome(Genome other)
+    {
+        fitness = other.fitness;
+        ID = other.ID;
+        weights = new List<float>(other.weights);
+    }
 }
 
 

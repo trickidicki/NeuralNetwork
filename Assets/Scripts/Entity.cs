@@ -5,11 +5,12 @@ using System.Collections.Generic;
 public class Entity : MonoBehaviour {
 
 	Agent testAgent;
-	private List<Agent> agents;
+	//private List<Agent> agents;
 	public float currentAgentFitness;
 	public float bestFitness;
-	private float currentTimer;
-	private int checkPointsHit;
+    public float overallBestFitness;
+    //private float currentTimer;
+	//private int checkPointsHit;
 
 	public NNet neuralNet;
 
@@ -21,15 +22,23 @@ public class Entity : MonoBehaviour {
 	private Vector3 defaultpos;
 	private Quaternion defaultrot;
 
+    private bool fullyTrained = false;
+    private Genome bestGenome;
+
 	hit hit;
 
 	public void OnGUI(){
 		int x = 600;
 		int y = 400;
 		GUI.Label (new Rect (x, y, 200, 20), "CurrentFitness: " + currentAgentFitness);
-		GUI.Label (new Rect (x, y+20, 200, 20), "BestFitness: " + bestFitness);
-		GUI.Label (new Rect (x+200, y, 200, 20), "Genome: " + genAlg.currentGenome + " of " + genAlg.totalPopulation);
+		GUI.Label (new Rect (x, y+20, 200, 20), "Current gen best: " + bestFitness);
+        GUI.Label(new Rect(x, y + 40, 200, 20), "Overall best fitness: " + overallBestFitness);
+        GUI.Label(new Rect(x + 200, y, 200, 20), "Genome: " + genAlg.currentGenome + " of " + genAlg.totalPopulation);
 		GUI.Label (new Rect (x+200, y + 20, 200, 20), "Generation: " + genAlg.generation);
+        if(fullyTrained)
+        {
+            GUI.Label(new Rect(x + 200, y + 40, 200, 20), "Fully trained");
+        }
 
 	}
 
@@ -41,6 +50,7 @@ public class Entity : MonoBehaviour {
 		genAlg.GenerateNewPopulation (15, totalWeights);
 		currentAgentFitness = 0.0f;
 		bestFitness = 0.0f;
+        overallBestFitness = 0.0f;
 
 		neuralNet = new NNet ();
 		neuralNet.CreateNet (1, 5, 8, 2);
@@ -57,16 +67,27 @@ public class Entity : MonoBehaviour {
 	}
 
 	// Update is called once per frame
-	void Update () {
+	void FixedUpdate () {
+        if (fullyTrained)
+            return;
 		checkpoints = hit.checkpoints;
 		if (testAgent.hasFailed) {
-			if(genAlg.GetCurrentGenomeIndex() == 15-1){
-				EvolveGenomes();
+			if(genAlg.GetCurrentGenomeIndex() == 15-1)
+            {
+                if (bestFitness < overallBestFitness)
+                {
+                    fullyTrained = true;
+                    SetTestSubject(bestGenome, true);
+                    return;
+                }
+                overallBestFitness = bestFitness;
+                bestGenome = new Genome(genAlg.GetBestGenome());
+                EvolveGenomes();
 				return;
 			}
 			NextTestSubject();
 		}
-		currentAgentFitness = testAgent.dist;
+		currentAgentFitness = testAgent.GetFitness();
 		if (currentAgentFitness > bestFitness) {
 			bestFitness = currentAgentFitness;
 		}
@@ -77,35 +98,43 @@ public class Entity : MonoBehaviour {
 		currentAgentFitness = 0.0f;
 		Genome genome = genAlg.GetNextGenome ();
 
-		neuralNet.FromGenome (genome, 5, 8, 2);
-
-		transform.position = defaultpos;
-		transform.rotation = defaultrot;
-
-		testAgent.Attach (neuralNet);
-		testAgent.ClearFailure ();
-
-
-
-		//reset the checkpoints
-		CPs = GameObject.FindGameObjectsWithTag ("Checkpoint");
-
-		foreach (GameObject c in CPs) {
-			Renderer tmp = c.gameObject.GetComponent<Renderer>();
-			tmp.material = normal;
-			Checkpoint p = c.gameObject.GetComponent<Checkpoint>();
-			p.passed = false;
-		}
+        SetTestSubject(genome);
 	}
 
-	public void BreedNewPopulation(){
+    private void SetTestSubject(Genome genome, bool selfDrive = false)
+    {
+        neuralNet.FromGenome(genome, 5, 8, 2);
+
+        transform.position = defaultpos;
+        transform.rotation = defaultrot;
+
+        testAgent.Attach(neuralNet, selfDrive);
+        testAgent.ClearFailure();
+
+        //reset the checkpoints
+        CPs = GameObject.FindGameObjectsWithTag("Checkpoint");
+
+        foreach (GameObject c in CPs)
+        {
+            Renderer tmp = c.gameObject.GetComponent<Renderer>();
+            tmp.material = normal;
+            Checkpoint p = c.gameObject.GetComponent<Checkpoint>();
+            if (p)
+            {
+                p.passed = false;
+            }
+        }
+    }
+
+	/*public void BreedNewPopulation(){
 		genAlg.ClearPopulation ();
 		int totalweights = 5 * 8 + 8 * 2 + 8 + 2;
 		genAlg.GenerateNewPopulation (15, totalweights);
-	}
+	}*/
 
 	public void EvolveGenomes(){
-		genAlg.BreedPopulation ();
+        bestFitness = 0.0f;
+        genAlg.BreedPopulation();
 		NextTestSubject ();
 	}
 
