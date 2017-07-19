@@ -5,14 +5,12 @@ using System.Collections.Generic;
 public class Entity : MonoBehaviour {
 
 	Agent testAgent;
-	//private List<Agent> agents;
 	public float currentAgentFitness;
 	public float bestFitness;
     public float overallBestFitness;
-    //private float currentTimer;
-	//private int checkPointsHit;
 
-	public NNet neuralNet;
+    public int numberOfHiddenLayers = 1;
+    public int neuronsPerHiddenLayer = 8;
 
 	public GA genAlg;
 	public int checkpoints;
@@ -28,8 +26,8 @@ public class Entity : MonoBehaviour {
 	hit hit;
 
 	public void OnGUI(){
-		int x = 600;
-		int y = 400;
+		int x = 0;
+		int y = 0;
 		GUI.Label (new Rect (x, y, 200, 20), "CurrentFitness: " + currentAgentFitness);
 		GUI.Label (new Rect (x, y+20, 200, 20), "Current gen best: " + bestFitness);
         GUI.Label(new Rect(x, y + 40, 200, 20), "Overall best fitness: " + overallBestFitness);
@@ -44,21 +42,18 @@ public class Entity : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
+        var raycast = GetComponent<RayCast>();
 
-		genAlg = new GA ();
-		int totalWeights = 5 * 8 + 8 * 2 + 8 + 2;
-		genAlg.GenerateNewPopulation (15, totalWeights);
+		genAlg = new GA (raycast.rayCount, numberOfHiddenLayers, neuronsPerHiddenLayer, 2);
+
+		genAlg.GenerateNewPopulation (15);
 		currentAgentFitness = 0.0f;
 		bestFitness = 0.0f;
         overallBestFitness = 0.0f;
 
-		neuralNet = new NNet ();
-		neuralNet.CreateNet (1, 5, 8, 2);
 		Genome genome = genAlg.GetNextGenome ();
-		neuralNet.FromGenome (genome, 5, 8, 2);
-
 		testAgent = gameObject.GetComponent<Agent>();
-		testAgent.Attach (neuralNet);
+		testAgent.Attach (genome);
 
 		hit = gameObject.GetComponent<hit> ();
 		checkpoints = hit.checkpoints;
@@ -72,7 +67,7 @@ public class Entity : MonoBehaviour {
             return;
 		checkpoints = hit.checkpoints;
 		if (testAgent.hasFailed) {
-			if(genAlg.GetCurrentGenomeIndex() == 15-1)
+			if(genAlg.GetCurrentGenomeIndex() == genAlg.GetTotalPopulation())
             {
                 if (bestFitness < overallBestFitness)
                 {
@@ -81,7 +76,7 @@ public class Entity : MonoBehaviour {
                     return;
                 }
                 overallBestFitness = bestFitness;
-                bestGenome = new Genome(genAlg.GetBestGenome());
+                bestGenome = new Genome(genAlg.GetBestGenome());    // Take a copy...
                 EvolveGenomes();
 				return;
 			}
@@ -95,20 +90,26 @@ public class Entity : MonoBehaviour {
 
 	public void NextTestSubject(){
 		genAlg.SetGenomeFitness (currentAgentFitness, genAlg.GetCurrentGenomeIndex ());
-		currentAgentFitness = 0.0f;
 		Genome genome = genAlg.GetNextGenome ();
-
         SetTestSubject(genome);
 	}
 
+    public void EvolveGenomes()
+    {
+        genAlg.BreedPopulation();
+        bestFitness = 0.0f;
+        Genome genome = genAlg.GetNextGenome();
+        SetTestSubject(genome);
+    }
+
     private void SetTestSubject(Genome genome, bool selfDrive = false)
     {
-        neuralNet.FromGenome(genome, 5, 8, 2);
+        currentAgentFitness = 0.0f;
 
         transform.position = defaultpos;
         transform.rotation = defaultrot;
 
-        testAgent.Attach(neuralNet, selfDrive);
+        testAgent.Attach(genome, selfDrive);
         testAgent.ClearFailure();
 
         //reset the checkpoints
@@ -131,12 +132,6 @@ public class Entity : MonoBehaviour {
 		int totalweights = 5 * 8 + 8 * 2 + 8 + 2;
 		genAlg.GenerateNewPopulation (15, totalweights);
 	}*/
-
-	public void EvolveGenomes(){
-        bestFitness = 0.0f;
-        genAlg.BreedPopulation();
-		NextTestSubject ();
-	}
 
 	public int GetCurrentMemberOfPopulation(){
 		return genAlg.GetCurrentGenomeIndex ();

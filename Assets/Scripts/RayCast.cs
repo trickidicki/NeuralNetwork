@@ -28,7 +28,7 @@ public class RayCast : MonoBehaviour
     }
 
     // Update is called once per frame
-    void FixedUpdate()
+    void Update()
     {
         RaycastHit hitInfo;
         var origin = transform.TransformPoint(box.center);
