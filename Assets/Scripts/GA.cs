@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 public class GA
 {
@@ -41,33 +42,17 @@ public class GA
         return population[this.currentGenome];
     }
 
-    public Genome GetBestGenome()
+    public List<Genome> GetBestGenomes(int count = 1)
     {
-        int bestGenome = -1;
-        float fitness = 0;
-        for (int i = 0; i < population.Count; i++)
-        {
-            fitness = population[i].fitness;
-            bestGenome = i;
-        }
-
-        return population[bestGenome];
+        SortPopulation();
+        return population.GetRange(0, count);
     }
 
-    public Genome GetWorstGenome()
+    public List<Genome> GetWorstGenomes(int count = 1)
     {
-        int worstGenome = -1;
-        float fitness = 1000000.0f;
-        for (int i = 0; i < population.Count; i++)
-        {
-            if (population[i].fitness < fitness)
-            {
-                fitness = population[i].fitness;
-                worstGenome = i;
-            }
-        }
-
-        return population[worstGenome];
+        SortPopulation();
+        population.Reverse();
+        return population.GetRange(0, count);
     }
 
     public Genome GetGenome(int index)
@@ -101,49 +86,9 @@ public class GA
         return genomeID++;
     }
 
-    public void GetBestCases(int totalGenomes, ref List<Genome> output)
+    private void SortPopulation()
     {
-        int genomeCount = 0;
-        int runCount = 0;
-
-        while (genomeCount < totalGenomes)
-        {
-            if (runCount > 10)
-                return;
-
-            runCount++;
-
-            //Find the best cases for cross breeding based on fitness score
-            float bestFitness = 0;
-            int bestIndex = -1;
-            for (int i = 0; i < this.totalPopulation; i++)
-            {
-                if (population[i].fitness > bestFitness)
-                {
-                    bool isUsed = false;
-
-                    for (int j = 0; j < output.Count; j++)
-                    {
-                        if (output[j].ID == population[i].ID)
-                        {
-                            isUsed = true;
-                        }
-                    }
-
-                    if (isUsed == false)
-                    {
-                        bestIndex = i;
-                        bestFitness = population[bestIndex].fitness;
-                    }
-                }
-            }
-
-            if (bestIndex != -1)
-            {
-                genomeCount++;
-                output.Add(population[bestIndex]);
-            }
-        }
+        population = population.OrderByDescending(x => x.fitness).ToList();
     }
 
     private bool RandBool()
@@ -156,29 +101,7 @@ public class GA
         baby1 = new Genome(g1, GetNextGenomeID());
         baby2 = new Genome(g2, GetNextGenomeID());
 
-
-
-        /*int totalWeights = g1.NumberOfWeights();
-        int crossover = (int)Random.Range(0, totalWeights - 1);
-
-        baby1 = new Genome(g1);
-        baby1.ID = GetNextGenomeID();
-
-        baby2 = new Genome(g2);
-        baby2.ID = GetNextGenomeID();
-
-        //Go from start to crossover point, copying the weights from g1
-        for (int i = 0; i < crossover; i++)
-        {
-            baby1.weights[i] = g1.weights[i];
-            baby2.weights[i] = g2.weights[i];
-        }
-
-        for (int i = crossover; i < totalWeights; i++)
-        {
-            baby1.weights[i] = g2.weights[i];
-            baby2.weights[i] = g1.weights[i];
-        }*/
+        Breeder.Breed(g1.net, g2.net, baby1.net, baby2.net);
     }
 
     public Genome CreateNewGenome()
@@ -202,34 +125,18 @@ public class GA
                 population.Add(genome);
             }
         }
-
-        /*for (int i = 0; i < population.Count; i++)
-        {
-            Genome genome = new Genome();
-            genome.ID = GetNextGenomeID();
-            genome.weights = new List<float>();
-            //resize
-            for (int k = 0; k < totalWeights; k++)
-            {
-                genome.weights.Add(RandomClamped());
-            }
-
-            population[i] = genome;
-        }*/
     }
 
     public void BreedPopulation()
     {
-        List<Genome> bestGenomes = new List<Genome>();
-
         //find the 4 best genomes
-        this.GetBestCases(4, ref bestGenomes);
+        List<Genome> bestGenomes = GetBestGenomes(4);
 
         //Breed them with each other twice to form 3*2 + 2*2 + 1*2 = 12 children
         List<Genome> children = new List<Genome>();
 
         //Carry on the best
-        Genome best = new Genome(bestGenomes[0]);
+        Genome best = new Genome(bestGenomes[0], bestGenomes[0].ID);
         best.fitness = 0.0f;
         //best.ID = bestGenomes[0].ID;
         //best.weights = bestGenomes[0].weights;

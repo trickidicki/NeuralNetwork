@@ -56,6 +56,10 @@ public class Agent : MonoBehaviour
                 return;
         }
 
+        if( genome == null)
+        {
+            return;
+        }
 
         if (selfDrive || !hasFailed)
         {
@@ -138,6 +142,7 @@ public class Agent : MonoBehaviour
     public void Attach(Genome genome, bool justDrive = false)
     {
         this.genome = genome;
+        this.ClearFailure();
         //neuralnet.CreateNet(genome.nInput, genome.nHiddenLayers, genome.nHiddenNeurons, genome.nOutput);
         //neuralnet.FromGenome(genome);
         if (justDrive)

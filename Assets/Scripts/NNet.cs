@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -40,16 +41,21 @@ public class NNet
         inputs = input;
     }
 
+    public void SetWeights(List<float> weights)
+    {
+        int pos = 0;
+        foreach(var layer in hiddenLayers)
+        {
+            layer.SetWeights(weights, ref pos);
+        }
+        outputLayer.SetWeights(weights, ref pos);
+    }
+
     public float GetOutput(int ID)
     {
         if (ID >= outputAmount)
             return 0.0f;
         return outputs[ID];
-    }
-
-    public int GetTotalOutputs()
-    {
-        return outputAmount;
     }
 
     public void CreateNet(int numOfInputs, int numOfHIddenLayers, int neuronsPerHidden, int numOfOutputs)
@@ -74,17 +80,6 @@ public class NNet
         outputLayer.PopulateLayer(numOfOutputs, numOfInputs);
     }
 
-    public void ReleaseNet()
-    {
-        inputlayer = new NLayer(LayerType.NInput);
-        outputLayer = new NLayer(LayerType.NOutput);
-        hiddenLayers = new List<NLayer>();
-    }
-
-    public int GetNumofHIddenLayers()
-    {
-        return hiddenLayers.Count;
-    }
     public void Mutate(float mutationRate, float maxPertebation)
     {
         // No need to mutate input layer.
@@ -93,105 +88,22 @@ public class NNet
         outputLayer.Mutate(mutationRate, maxPertebation);
     }
 
-    /*public Genome ToGenome()
+    public List<float> GetNeuronWeights()
     {
-        Genome genome = new Genome(inputAmount, hiddenLayers.Count, hiddenLayers[0].NumberOfNeurons(), outputAmount, -1);
-		
-        for (int i=0; i<this.hiddenLayers.Count; i++) {
-            List<float> weights = new List<float> ();
-            hiddenLayers[i].GetWeights(ref weights);
-            for(int j=0; j<weights.Count;j++){
-                genome.weights.Add (weights[j]);
-            }
-        }
-		
-        List<float> outweights = new List<float> ();
-        outputLayer.GetWeights(ref outweights);
-        for (int i=0; i<outweights.Count; i++) {
-            genome.weights.Add (outweights[i]);
-        }
-		
-        return genome;
-    }*/
-
-    /*public void FromGenome(Genome genome)
-    {
-        ReleaseNet();
-
-        outputAmount = genome.nOutput;
-        inputAmount = genome.nInput;
-        int neuronsPerHidden = genome.nHiddenNeurons;
-
-        int weightsForHidden = outputAmount * neuronsPerHidden;
-
-        int nInputs = inputAmount;
-
-        inputlayer = new NLayer();
-        //inputlayer.LoadLayer(genome.GetInputWeights())
-        /// Input layer doesn't have 'weights' - the input is set directly.
-        //inputlayer.SetWeights(genome.GetInputWeights(), inputAmount, nInputs);
-
-
-        for (int n = 0; n < genome.nHiddenLayers; n++)
+        List<float> retval = new List<float>();
+        foreach (var layer in hiddenLayers)
         {
-            NLayer hidden = new NLayer();
-            hidden.SetWeights(genome.GetHiddenWeights(n), genome.nHiddenNeurons, nInputs);
-            hiddenLayers.Add(hidden);
-            nInputs = genome.nHiddenNeurons;
-        }
-        outputLayer = new NLayer();
-        outputLayer.SetWeights(genome.GetOutputWeights(), genome.nOutput, nInputs);
-
-        /*
-        //List<Neuron> neurons = new List<Neuron>();
-        Neuron[] neurons = CreateNeurons(neuronsPerHidden);
-
-        for (int i = 0; i < neurons.Length; i++)
-        {
-            //init
-            //neurons.Add(new Neuron());
-            List<float> weights = new List<float>();
-            //init
-
-            for (int j = 0; j < inputAmount + 1; j++)
+            foreach (var neuron in layer.neurons)
             {
-                weights.Add(0.0f);
-                weights[j] = genome.weights[i * neuronsPerHidden + j];
+                retval.AddRange(neuron.weights);
             }
-            neurons[i].weights = new List<float>();
-            neurons[i].Initilise(weights, inputAmount);
         }
-        hidden.LoadLayer(neurons);
-        //Debug.Log ("fromgenome, hiddenlayer neruons#: " + neurons.Count);
-        //Debug.Log ("fromgenome, hiddenlayer numInput: " + neurons [0].numInputs);
-        this.hiddenLayers.Add(hidden);
-
-        //Clear weights and reasign the weights to the output
-        int weightsForOutput = neuronsPerHidden * outputAmount;
-        
-        //List<Neuron> outneurons = new List<Neuron>();
-        Neuron[] outneurons = CreateNeurons(outputAmount);
-
-        for (int i = 0; i < neurons.Length; i++)
+        foreach (var neuron in outputLayer.neurons)
         {
-            //outneurons.Add(new Neuron());
-
-            List<float> weights = new List<float>();
-
-            for (int j = 0; j < neuronsPerHidden + 1; j++)
-            {
-                weights.Add(0.0f);
-                weights[j] = genome.weights[i * neuronsPerHidden + j];
-            }
-            outneurons[i].weights = new List<float>();
-            outneurons[i].Initilise(weights, neuronsPerHidden);
+            retval.AddRange(neuron.weights);
         }
-        this.outputLayer = new NLayer();
-        this.outputLayer.LoadLayer(outneurons);
-        //Debug.Log ("fromgenome, outputlayer neruons#: " + outneurons.Count);
-        //Debug.Log ("fromgenome, outputlayer numInput: " + outneurons [0].numInputs);
-         
-    }*/
+        return retval;
+    }
 }
 
 
@@ -204,30 +116,12 @@ public class NLayer
     private int totalInputs;
     public LayerType layerType;
 
-    private Neuron[] neurons;
-    //List<Neuron> neurons = new List<Neuron>();
+    public Neuron[] neurons;
 
-    public NLayer(LayerType type)
+    public NLayer(LayerType type = LayerType.NHidden)
     {
         layerType = type;
         totalInputs = 0;
-    }
-
-    // Special constructor for creating cross-breeds from two parents.
-    public NLayer(NLayer gen1, NLayer gen2)
-    {
-        layerType = gen1.layerType;
-        totalInputs = gen1.totalInputs;
-        neurons = new Neuron[totalInputs];
-        for (int i = 0; i < gen1.neurons.Length; i++)
-        {
-            neurons[i] = new Neuron(gen1.neurons[i], gen2.neurons[i]);
-        }
-    }
-
-    public int NumberOfNeurons()
-    {
-        return neurons.Length;
     }
 
     public float Sigmoid(float a, float p)
@@ -250,23 +144,17 @@ public class NLayer
 
     public void Evaluate(List<float> input, ref List<float> output)
     {
-        //Debug.Log ("input.count " + input.Count);
-        //Debug.Log ("totalneuron " + totalNeurons);
-        //cycle over all the neurons and sum their weights against the inputs
-        //for (int i = 0; i < neurons.Length; i++)
         foreach(var neuron in neurons)
         {
             int inputIndex = 0;
             float activation = 0.0f;
-
-            //Debug.Log ("numInputs " + (neurons[i].numInputs - 1));
 
             //sum the weights to the activation value
             //we do the sizeof the weights - 1 so that we can add in the bias to the activation afterwards.
             for (int j = 0; j < neuron.numInputs - 1; j++)
             {
 
-                activation += input[inputIndex] * neuron.weights[j];
+                activation += input[inputIndex] * (neuron.weights[j]);
                 inputIndex++;
             }
 
@@ -276,12 +164,6 @@ public class NLayer
 
             output.Add(Sigmoid(activation, 1.0f));
         }
-    }
-
-    public void LoadLayer(Neuron[] input)
-    {
-        //totalNeurons = input.Count;
-        neurons = (Neuron[])input.Clone();
     }
 
     private Neuron[] CreateNeurons(int n)
@@ -300,13 +182,6 @@ public class NLayer
         var totalNeurons = numOfNeurons;
 
         neurons = CreateNeurons(numOfNeurons);
-        /*if (neurons.Count < numOfNeurons)
-        {
-            for (int i = 0; i < numOfNeurons; i++)
-            {
-                neurons.Add(new Neuron());
-            }
-        }*/
 
         for (int i = 0; i < numOfNeurons; i++)
         {
@@ -314,57 +189,21 @@ public class NLayer
         }
     }
 
-    public void SetWeights(float[] weights, int numOfNeurons, int numOfInputs)
+    public void SetWeights(List<float> weights, ref int pos)
     {
-        int index = 0;
-        totalInputs = numOfInputs;
-        var totalNeurons = numOfNeurons;
-
-        neurons = CreateNeurons(numOfNeurons);
-        /*if (neurons.Count < numOfNeurons)
-        {
-            for (int i = 0; i < numOfNeurons - neurons.Count; i++)
-            {
-                neurons.Add(new Neuron());
-            }
-        }*/
-        //Copy the weights into the neurons.
-        for (int i = 0; i < numOfNeurons; i++)
-        {
-            neurons[i].InitialiseEmpty(numOfInputs);
-            /*if (neurons[i].weights.Count < numOfInputs)
-            {
-                for (int k = 0; k < numOfInputs - neurons[i].weights.Count; k++)
-                {
-                    neurons[i].weights.Add(0.0f);
-                }
-            }*/
-            for (int j = 0; j < numOfInputs; j++)
-            {
-                neurons[i].weights[j] = weights[index];
-                index++;
-            }
-        }
-    }
-
-    public void GetWeights(ref List<float> output)
-    {
-        //Calculate the size of the output list by calculating the amount of weights in each neurons.
-        output.Clear();
-
         for (int i = 0; i < neurons.Length; i++)
         {
-            output.AddRange(neurons[i].weights);
-            /*for (int j = 0; j < neurons[i].weights.Length; j++)
-            {
-                output[neurons.Length * i + j] = neurons[i].weights[j];
-            }*/
+            var neuron = neurons[i];
+            int numWeights = neuron.numInputs + 1;
+            neuron.Initilise(weights.GetRange(pos, numWeights), neuron.numInputs);
+            pos += numWeights;
         }
     }
 }
 
 
 //=============================================================
+
 public class Neuron
 {
     public int numInputs;
@@ -376,26 +215,11 @@ public class Neuron
         weights = new float[0];
     }
 
-    // Constructor for creating cross-breeds from two parents
-    public Neuron(Neuron gen1, Neuron gen2)
-    {
-        InitialiseEmpty(gen1.numInputs);
-
-        int crossover = (int)Random.Range(0, gen1.numInputs - 1);
-        for (int i = 0; i < crossover; i++)
-        {
-            weights[i] = gen1.weights[i];
-        }
-        for (int i = crossover; i < gen1.weights.Length; i++)
-        {
-            weights[i] = gen2.weights[i];
-        }
-    }
-
     public float RandomFloat()
     {
-        float rand = (float)Random.Range(0.0f, 32767.0f);
-        return rand / 32767.0f/*32767*/ + 1.0f;
+        // Generates a random number between 1.0 and 1.9999999f
+        float rand = (float)UnityEngine.Random.Range(0.0f, 32767.0f);
+        return rand / 32767.0f + 1.0f;
     }
 
     public float RandomClamped()
@@ -434,9 +258,11 @@ public class Neuron
     {
         for (int i = 0; i < weights.Length; i++)
         {
-            if (RandomClamped() < mutationRate)
+            float rand = RandomFloat() - 1.0f;
+            if (rand < mutationRate)
             {
-                weights[i] += (RandomClamped() * maxPertebation);
+                float mutant = (RandomClamped() * maxPertebation); 
+                weights[i] += mutant;
             }
         }
     }
@@ -454,17 +280,44 @@ public class Neuron
     }
 }
 
+public class Breeder
+{
+    private static bool Switch()
+    {
+        return UnityEngine.Random.Range(-1f, 1f) > 0;
+    }
+    public static void Breed(NNet parent1, NNet parent2, NNet child1, NNet child2)
+    {
+        var p1weights = parent1.GetNeuronWeights().GetEnumerator();
+        var p2weights = parent1.GetNeuronWeights().GetEnumerator();
+        var c1weights = new List<float>();
+        var c2weights = new List<float>();
+
+        while(p1weights.MoveNext() && p2weights.MoveNext())
+        {
+            if(Switch())
+            {
+                c1weights.Add(p1weights.Current);
+                c2weights.Add(p2weights.Current);
+            }
+            else
+            {
+                c1weights.Add(p2weights.Current);
+                c2weights.Add(p1weights.Current);
+            }
+        }
+
+        child1.SetWeights(c1weights);
+        child2.SetWeights(c2weights);
+    }
+}
+
 //===================================
 public class Genome
 {
     public float fitness;
     public int ID;
     public NNet net;
-    //public float[] weights;
-
-    //public int nInput, nHiddenLayers, nHiddenNeurons, nOutput;
-
-    //public Genome() { }
 
     public Genome(int nInput, int nHiddenLayer, int nHiddenLayerNeurons, int nOutput, int genomeID)
     {
@@ -484,93 +337,6 @@ public class Genome
     {
         net.Mutate(mutationRate, maxPertebation);
     }
-
-    /*public Genome(int nInput, int nHiddenLayer, int nHiddenLayerNeurons, int nOutput, int genomeID)
-    {
-        this.nInput = nInput;
-        this.nHiddenLayers = nHiddenLayer;
-        this.nHiddenNeurons = nHiddenLayerNeurons;
-        this.nOutput = nOutput;
-        weights = new float[NumberOfWeights()];
-        fitness = 0f;
-        ID = genomeID;
-    }
-
-    public Genome(Genome other)
-    {
-        fitness = other.fitness;
-        ID = other.ID;
-        nInput = other.nInput;
-        nHiddenLayers = other.nHiddenLayers;
-        nHiddenNeurons = other.nHiddenNeurons;
-        nOutput = other.nOutput;
-        weights = (float[]) other.weights.Clone();
-    }
-
-    public int NumberOfWeights()
-    {
-        int nCount = 0;
-        int nPreviousLayer = nInput;
-
-        for(int i = 0; i < nHiddenLayers; i++)
-        {
-            nCount += nPreviousLayer * nHiddenNeurons;
-            nPreviousLayer = nHiddenNeurons;
-        }
-
-        nCount += nPreviousLayer * nOutput;
-        return nCount;
-    }
-
-    public void Mutate(float mutationRate, float maxPertebation)
-    {
-        int nWeights = NumberOfWeights();
-        for (int i = 0; i < nWeights; i++)
-        {
-            if (RandomClamped() < mutationRate)
-            {
-                weights[i] += (RandomClamped() * maxPertebation);
-            }
-        }
-    }
-
-    private float[] ExtractWeights(int nStart, int nCount)
-    {
-        float[] retval = new float[nCount];
-        System.Array.Copy(weights, nStart, retval, 0, nCount);
-        return retval;
-    }
-
-    public float[] GetHiddenWeights(int nLayer)
-    {
-        int nOffset = 0;
-        int nCount = nInput;
-        for (int i = 0; i < nLayer; i++)
-        {
-            nOffset += nCount;
-            nCount = nHiddenNeurons;
-        }
-        int offset = nLayer * nHiddenNeurons;
-        return ExtractWeights(offset, nHiddenNeurons);
-    }
-
-    public float[] GetOutputWeights()
-    {
-        int offset = nHiddenLayers * nHiddenNeurons;
-        return ExtractWeights(offset, nOutput);
-    }
-
-    private float RandomFloat()
-    {
-        float rand = (float)Random.Range(0.0f, 32767.0f);
-        return rand / 32767.0f/*32767* / + 1.0f;
-    }
-
-    private float RandomClamped()
-    {
-        return RandomFloat() - RandomFloat();
-    }
-     */
 }
 
 

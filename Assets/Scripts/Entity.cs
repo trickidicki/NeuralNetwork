@@ -76,7 +76,7 @@ public class Entity : MonoBehaviour {
                     return;
                 }
                 overallBestFitness = bestFitness;
-                bestGenome = new Genome(genAlg.GetBestGenome());    // Take a copy...
+                bestGenome = new Genome(genAlg.GetBestGenomes(1)[0], -1);    // Take a copy...
                 EvolveGenomes();
 				return;
 			}
