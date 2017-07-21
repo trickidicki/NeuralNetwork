@@ -13,7 +13,6 @@ public class Entity : MonoBehaviour {
     public int neuronsPerHiddenLayer = 8;
 
 	public GA genAlg;
-	public int checkpoints;
 	public GameObject[] CPs;
 	public Material normal;
 
@@ -22,8 +21,6 @@ public class Entity : MonoBehaviour {
 
     private bool fullyTrained = false;
     private Genome bestGenome;
-
-	hit hit;
 
 	public void OnGUI(){
 		int x = 0;
@@ -55,17 +52,14 @@ public class Entity : MonoBehaviour {
 		testAgent = gameObject.GetComponent<Agent>();
 		testAgent.Attach (genome);
 
-		hit = gameObject.GetComponent<hit> ();
-		checkpoints = hit.checkpoints;
 		defaultpos = transform.position;
 		defaultrot = transform.rotation;
 	}
 
 	// Update is called once per frame
-	void FixedUpdate () {
+	void Update () {
         if (fullyTrained)
             return;
-		checkpoints = hit.checkpoints;
 		if (testAgent.hasFailed) {
 			if(genAlg.GetCurrentGenomeIndex() == genAlg.GetTotalPopulation())
             {
@@ -126,19 +120,4 @@ public class Entity : MonoBehaviour {
             }
         }
     }
-
-	/*public void BreedNewPopulation(){
-		genAlg.ClearPopulation ();
-		int totalweights = 5 * 8 + 8 * 2 + 8 + 2;
-		genAlg.GenerateNewPopulation (15, totalweights);
-	}*/
-
-	public int GetCurrentMemberOfPopulation(){
-		return genAlg.GetCurrentGenomeIndex ();
-	}
-
-	public void PrintStats(){
-		//to be implemented
-	}
-
 }

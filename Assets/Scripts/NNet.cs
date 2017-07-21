@@ -286,24 +286,32 @@ public class Breeder
     {
         return UnityEngine.Random.Range(-1f, 1f) > 0;
     }
+
     public static void Breed(NNet parent1, NNet parent2, NNet child1, NNet child2)
     {
-        var p1weights = parent1.GetNeuronWeights().GetEnumerator();
-        var p2weights = parent1.GetNeuronWeights().GetEnumerator();
+        var p1Enum = parent1.GetNeuronWeights().GetEnumerator();
+        var p2Enum = parent2.GetNeuronWeights().GetEnumerator();
+
+        var p1weights = new List<float>();
+        var p2weights = new List<float>();
+        
         var c1weights = new List<float>();
         var c2weights = new List<float>();
 
-        while(p1weights.MoveNext() && p2weights.MoveNext())
+        while(p1Enum.MoveNext() && p2Enum.MoveNext())
         {
+            p1weights.Add(p1Enum.Current);
+            p2weights.Add(p2Enum.Current);
+
             if(Switch())
             {
-                c1weights.Add(p1weights.Current);
-                c2weights.Add(p2weights.Current);
+                c1weights.Add(p1Enum.Current);
+                c2weights.Add(p2Enum.Current);
             }
             else
             {
-                c1weights.Add(p2weights.Current);
-                c2weights.Add(p1weights.Current);
+                c1weights.Add(p2Enum.Current);
+                c2weights.Add(p1Enum.Current);
             }
         }
 

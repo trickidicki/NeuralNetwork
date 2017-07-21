@@ -19,8 +19,6 @@ public class Agent : MonoBehaviour
     public float leftTheta;
     public float rightTheta;
 
-    public float dist;
-
     hit hit;
     int framecount;
     float fitness;
@@ -47,7 +45,7 @@ public class Agent : MonoBehaviour
     }
 
     // Update is called once per frame
-    void FixedUpdate()
+    void Update()
     {
         if (!selfDrive)
         {
@@ -63,7 +61,6 @@ public class Agent : MonoBehaviour
 
         if (selfDrive || !hasFailed)
         {
-            dist += Time.fixedDeltaTime;
             genome.net.SetInput(raycast.GetProbes());
             genome.net.refresh();
 
@@ -81,10 +78,6 @@ public class Agent : MonoBehaviour
             speed = Clamp(speed, -_SPEED, _SPEED);
 
         }
-        else
-        {
-            dist = 0.0f;
-        }
     }
 
     private int ElapsedTime()
@@ -99,8 +92,8 @@ public class Agent : MonoBehaviour
 
         float angle = Vector3.Angle(lastPoint, facing);
         cummulativeAngle += Mathf.Abs(angle);
-        if (Vector3.Cross(lastPoint, facing).y < 0)
-            angle *= -1;
+        //if (Vector3.Cross(lastPoint, facing).y < 0)
+        //    angle *= -1;
 
         totalRot += angle;
         lastPoint = facing;
@@ -108,9 +101,8 @@ public class Agent : MonoBehaviour
 
     private void UpdateFitness()
     {
-        UpdateRotation();
-
         distanceTravelled += Vector3.Distance(transform.position, lastPoint);
+        UpdateRotation();
 
         int elapsedTime = ElapsedTime();
         if (elapsedTime > 0)
@@ -131,10 +123,6 @@ public class Agent : MonoBehaviour
     private bool CheckFailure()
     {
         hasFailed = hit.crash || Mathf.Abs(totalRot) > 1080.0f;
-        if (hasFailed)
-        {
-            dist = 0.0f;
-        }
         return hasFailed;
     }
 
@@ -143,8 +131,6 @@ public class Agent : MonoBehaviour
     {
         this.genome = genome;
         this.ClearFailure();
-        //neuralnet.CreateNet(genome.nInput, genome.nHiddenLayers, genome.nHiddenNeurons, genome.nOutput);
-        //neuralnet.FromGenome(genome);
         if (justDrive)
         {
             selfDrive = true;
@@ -159,7 +145,6 @@ public class Agent : MonoBehaviour
             hit.crash = false;
             hit.checkpoints = 0;
         }
-        dist = 0.0f;
         distanceTravelled = 0.0f;
         framecount = Time.frameCount;
 

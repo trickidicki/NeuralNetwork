@@ -30,11 +30,7 @@ public class RayCast : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        RaycastHit hitInfo;
         var origin = transform.TransformPoint(box.center);
-        bool ok = Physics.Raycast(origin, -transform.forward, out hitInfo);
-        Debug.DrawRay(transform.position, -transform.forward, Color.green, 0, true);
-
         for (var n = 0; n < rayCount; n++)
         {
             float angle = -90.0f + n * segmentAngle;
@@ -56,6 +52,7 @@ public class RayCast : MonoBehaviour
         Debug.DrawLine(origin, hitInfo.point, color, 0f, true);
         return Normalise(hitInfo.distance);
     }
+
     public float Normalise(float i)
     {
         return 1 - (i > RayCast_Length ? RayCast_Length : i) / RayCast_Length;     //Clamp maximum depth
