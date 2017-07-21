@@ -39,7 +39,7 @@ public class RayCast : MonoBehaviour
         {
             float angle = -90.0f + n * segmentAngle;
             Vector3 vec = Quaternion.AngleAxis(angle, transform.up) * -transform.forward;
-            hits[n] = CastRay(origin, vec);
+            hits[n] = CastRay(origin, vec, n);
         }
     }
 
@@ -48,16 +48,25 @@ public class RayCast : MonoBehaviour
         return new List<float>(hits);
     }
 
-    float CastRay(Vector3 origin, Vector3 vec)
+    float CastRay(Vector3 origin, Vector3 vec, int n)
     {
+        Color[] colors = new Color[5];
+        colors[0] = Color.red;
+        colors[1] =  Color.yellow;
+        colors[2] =  Color.green;
+         colors[3] =  Color.blue;
+         colors[4] =  Color.cyan;
+
+
+        
         RaycastHit hitInfo;
         bool col = Physics.Raycast(origin, vec, out hitInfo);
-        Debug.DrawRay(origin, vec, Color.yellow, 0, true);
+        Color color = Color.HSVToRGB((float)n / rayCount, 1f, 1f);
+        Debug.DrawLine(origin, hitInfo.point, color, 0f, true);
         return Normalise(hitInfo.distance);
     }
     public float Normalise(float i)
     {
-        float depth = (i > 10.0f ? 10.0f : i) / RayCast_Length;     //Clamp maximum depth
-        return 1 - depth;
+        return 1 - (i > RayCast_Length ? RayCast_Length : i) / RayCast_Length;     //Clamp maximum depth
     }
 }

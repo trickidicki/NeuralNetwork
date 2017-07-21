@@ -154,8 +154,11 @@ public class Agent : MonoBehaviour
     public void ClearFailure()
     {
         hasFailed = false;
-        hit.crash = false;
-        hit.checkpoints = 0;
+        if (hit != null)
+        {
+            hit.crash = false;
+            hit.checkpoints = 0;
+        }
         dist = 0.0f;
         distanceTravelled = 0.0f;
         framecount = Time.frameCount;
