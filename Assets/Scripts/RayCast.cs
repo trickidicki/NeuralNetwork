@@ -50,15 +50,6 @@ public class RayCast : MonoBehaviour
 
     float CastRay(Vector3 origin, Vector3 vec, int n)
     {
-        Color[] colors = new Color[5];
-        colors[0] = Color.red;
-        colors[1] =  Color.yellow;
-        colors[2] =  Color.green;
-         colors[3] =  Color.blue;
-         colors[4] =  Color.cyan;
-
-
-        
         RaycastHit hitInfo;
         bool col = Physics.Raycast(origin, vec, out hitInfo);
         Color color = Color.HSVToRGB((float)n / rayCount, 1f, 1f);
