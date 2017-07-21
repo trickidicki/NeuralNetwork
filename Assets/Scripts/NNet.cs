@@ -289,30 +289,23 @@ public class Breeder
 
     public static void Breed(NNet parent1, NNet parent2, NNet child1, NNet child2)
     {
-        var p1Enum = parent1.GetNeuronWeights().GetEnumerator();
-        var p2Enum = parent2.GetNeuronWeights().GetEnumerator();
-
-        var p1weights = new List<float>();
-        var p2weights = new List<float>();
+        var p1weights = parent1.GetNeuronWeights();
+        var p2weights = parent2.GetNeuronWeights();
         
         var c1weights = new List<float>();
         var c2weights = new List<float>();
 
-        while(p1Enum.MoveNext() && p2Enum.MoveNext())
+        int crossover = (int)UnityEngine.Random.Range(0, p1weights.Count - 1);
+        for (int i = 0; i < crossover; i++ )
         {
-            p1weights.Add(p1Enum.Current);
-            p2weights.Add(p2Enum.Current);
+            c1weights.Add(p1weights[i]);
+            c2weights.Add(p2weights[i]);
+        }
 
-            if(Switch())
-            {
-                c1weights.Add(p1Enum.Current);
-                c2weights.Add(p2Enum.Current);
-            }
-            else
-            {
-                c1weights.Add(p2Enum.Current);
-                c2weights.Add(p1Enum.Current);
-            }
+        for (int i = crossover; i < p1weights.Count; i++)
+        {
+            c1weights.Add(p2weights[i]);
+            c2weights.Add(p1weights[i]);
         }
 
         child1.SetWeights(c1weights);

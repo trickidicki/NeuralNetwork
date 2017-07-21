@@ -103,8 +103,13 @@ public class Entity : MonoBehaviour {
         transform.position = defaultpos;
         transform.rotation = defaultrot;
 
+        Transform root = this.transform;
+        while (root.parent != null) {
+            root = root.parent;
+        }
+        root.BroadcastMessage("Restart");
+
         testAgent.Attach(genome, selfDrive);
-        testAgent.ClearFailure();
 
         //reset the checkpoints
         CPs = GameObject.FindGameObjectsWithTag("Checkpoint");

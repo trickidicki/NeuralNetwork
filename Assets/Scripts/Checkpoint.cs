@@ -10,6 +10,11 @@ public class Checkpoint : MonoBehaviour {
 		this.passed = false;
 	}
 	
+    void Restart()
+    {
+        passed = false;
+    }
+
 	// Update is called once per frame
 	void Update () {
 

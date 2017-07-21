@@ -8,10 +8,8 @@ public class hit : MonoBehaviour {
 	public Quaternion init_rotation;
 	public bool crash;
 
-	Agent agent;
 	// Use this for initialization
 	void Start () {
-		agent = gameObject.GetComponent<Agent> ();
 		crash = false;
 		checkpoints = 0;
 		init_pos = transform.position;
@@ -36,7 +34,6 @@ public class hit : MonoBehaviour {
 				t.SetBool(true);
 				tmp.material = Passed;
 				checkpoints++;
-                //agent.HitCheckpoint();
 			}
 		} else {
 			//hit a wall considered fail

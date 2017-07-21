@@ -44,6 +44,11 @@ public class Agent : MonoBehaviour
         rightTheta = 0.0f;
     }
 
+    void Restart()
+    {
+        ClearFailure();
+    }
+
     // Update is called once per frame
     void Update()
     {
@@ -76,7 +81,6 @@ public class Agent : MonoBehaviour
             speed *= _SPEED;
 
             speed = Clamp(speed, -_SPEED, _SPEED);
-
         }
     }
 
